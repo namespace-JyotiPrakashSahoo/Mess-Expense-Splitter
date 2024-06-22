@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hostel Expense Manager</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <!-- <link rel="stylesheet" href="styles.css"> -->
+  <style>
+    .person {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 15px;
+    }
+
+    .person .delete-person-btn {
+      align-self: flex-start;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container mt-5">
+    <h1 class="text-center">Hostel Expense Manager</h1>
+
+    <div id="expenseForm" class="my-4">
+      <h3>Add Expense</h3>
+      <form id="addExpenseForm">
+        <div class="form-group">
+          <label for="expenseName">Expense Name</label>
+          <input type="text" class="form-control" id="expenseName" required>
+        </div>
+        <div class="form-group">
+          <label for="expenseAmount">Amount</label>
+          <input type="number" class="form-control" id="expenseAmount" required>
+        </div>
+        <div id="persons">
+          <h4>Persons</h4>
+          <div class="form-group person">
+            <input type="text" class="form-control mb-2" placeholder="Person Name" required>
+            <input type="number" class="form-control mb-2" placeholder="Days Lived" required>
+            <button type="button" class="btn btn-danger delete-person-btn">Delete</button>
+          </div>
+        </div>
+        <button type="button" class="btn btn-secondary" id="addPersonBtn">Add Person</button>
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </form>
+    </div>
+
+    <div id="expensesList" class="my-4">
+      <h3>Expenses List</h3>
+      <ul class="list-group" id="expenses"></ul>
+    </div>
+
+    <div id="shareCalculation" class="my-4">
+      <h3>Share Calculation</h3>
+      <button class="btn btn-success" id="calculateShareBtn">Calculate Share</button>
+      <ul class="list-group mt-3" id="shares"></ul>
+    </div>
+
+    <div id="lastCalculations" class="my-4">
+      <h3>Last Five Calculations</h3>
+      <ul class="list-group mt-3" id="lastCalculationsList"></ul>
+    </div>
+  </div>
+
+  <!-- <script src="script.js"></script> -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const addExpenseForm = document.getElementById('addExpenseForm');
+      const expenseNameInput = document.getElementById('expenseName');
+      const expenseAmountInput = document.getElementById('expenseAmount');
+      const personsDiv = document.getElementById('persons');
+      const addPersonBtn = document.getElementById('addPersonBtn');
+      const expensesList = document.getElementById('expenses');
+      const calculateShareBtn = document.getElementById('calculateShareBtn');
+      const sharesList = document.getElementById('shares');
+      const lastCalculationsList = document.getElementById('lastCalculationsList');
+
+      let expenses = [];
+
+      addPersonBtn.addEventListener('click', addPerson);
+
+      addExpenseForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const expenseName = expenseNameInput.value;
+        const expenseAmount = parseFloat(expenseAmountInput.value);
+        const persons = Array.from(personsDiv.getElementsByClassName('person')).map(personDiv => {
+          const inputs = personDiv.getElementsByTagName('input');
+          return {
+            name: inputs[0].value,
+            daysLived: parseInt(inputs[1].value)
+          };
+        });
+
+        const expense = { name: expenseName, amount: expenseAmount, persons };
+        expenses.push(expense);
+        displayExpenses();
+        addExpenseForm.reset();
+        resetPersonsDiv();
+      });
+
+      calculateShareBtn.addEventListener('click', () => {
+        let totalDays = 0;
+        expenses.forEach(expense => {
+          expense.persons.forEach(person => {
+            totalDays += person.daysLived;
+          });
+        });
+
+        const shares = {};
+        expenses.forEach(expense => {
+          const perDayCost = expense.amount / totalDays;
+          expense.persons.forEach(person => {
+            if (!shares[person.name]) {
+              shares[person.name] = 0;
+            }
+            shares[person.name] += person.daysLived * perDayCost;
+          });
+        });
+
+        sharesList.innerHTML = '';
+        Object.keys(shares).forEach(name => {
+          const shareItem = document.createElement('li');
+          shareItem.classList.add('list-group-item');
+          shareItem.textContent = `${name}: ₹ ${shares[name].toFixed(2)}`;
+          sharesList.appendChild(shareItem);
+        });
+
+        saveCalculation(shares);
+        displayLastCalculations();
+      });
+
+      function addPerson() {
+        const personDiv = document.createElement('div');
+        personDiv.classList.add('form-group', 'person');
+        personDiv.innerHTML = `
+            <input type="text" class="form-control mb-2" placeholder="Person Name" required>
+            <input type="number" class="form-control mb-2" placeholder="Days Lived" required>
+            <button type="button" class="btn btn-danger delete-person-btn">Delete</button>
+        `;
+        personsDiv.appendChild(personDiv);
+
+        const deletePersonBtn = personDiv.querySelector('.delete-person-btn');
+        deletePersonBtn.addEventListener('click', () => {
+          personDiv.remove();
+        });
+      }
+
+      function resetPersonsDiv() {
+        personsDiv.innerHTML = `
+            <h4>Persons</h4>
+            <div class="form-group person">
+                <input type="text" class="form-control mb-2" placeholder="Person Name" required>
+                <input type="number" class="form-control mb-2" placeholder="Days Lived" required>
+                <button type="button" class="btn btn-danger delete-person-btn">Delete</button>
+            </div>
+        `;
+        const deletePersonBtn = personsDiv.querySelector('.delete-person-btn');
+        deletePersonBtn.addEventListener('click', () => {
+          deletePersonBtn.parentElement.remove();
+        });
+      }
+
+      function displayExpenses() {
+        expensesList.innerHTML = '';
+        expenses.forEach(expense => {
+          const expenseItem = document.createElement('li');
+          expenseItem.classList.add('list-group-item');
+          expenseItem.innerHTML = `<h5>${expense.name} - ₹ ${expense.amount.toFixed(2)}</h5>`;
+          const personsList = document.createElement('ul');
+          expense.persons.forEach(person => {
+            const personItem = document.createElement('li');
+            personItem.textContent = `${person.name}: ${person.daysLived} days`;
+            personsList.appendChild(personItem);
+          });
+          expenseItem.appendChild(personsList);
+          expensesList.appendChild(expenseItem);
+        });
+      }
+
+      function saveCalculation(shares) {
+        let lastCalculations = JSON.parse(localStorage.getItem('lastCalculations')) || [];
+        if (lastCalculations.length >= 5) {
+          lastCalculations.pop();
+        }
+        lastCalculations.unshift(shares);
+        localStorage.setItem('lastCalculations', JSON.stringify(lastCalculations));
+      }
+
+      function displayLastCalculations() {
+        lastCalculationsList.innerHTML = '';
+        let lastCalculations = JSON.parse(localStorage.getItem('lastCalculations')) || [];
+        lastCalculations.forEach((calculation, index) => {
+          const calculationItem = document.createElement('li');
+          calculationItem.classList.add('list-group-item');
+          calculationItem.innerHTML = `<h5>Calculation ${index + 1}</h5>`;
+          const sharesList = document.createElement('ul');
+          Object.keys(calculation).forEach(name => {
+            const shareItem = document.createElement('li');
+            shareItem.textContent = `${name}: ₹ ${calculation[name].toFixed(2)}`;
+            sharesList.appendChild(shareItem);
+          });
+          calculationItem.appendChild(sharesList);
+          lastCalculationsList.appendChild(calculationItem);
+        });
+      }
+
+      displayLastCalculations();
+    });
+
+  </script>
+</body>
+
+</html>
