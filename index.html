@@ -197,7 +197,7 @@
         lastCalculations.forEach((calculation, index) => {
           const calculationItem = document.createElement('li');
           calculationItem.classList.add('list-group-item');
-          calculationItem.innerHTML = `<h5>Calculation ${index + 1}</h5>`;
+          calculationItem.innerHTML = `<h5>${index + 1}. ${expense.name}</h5>`;
           const sharesList = document.createElement('ul');
           Object.keys(calculation).forEach(name => {
             const shareItem = document.createElement('li');
